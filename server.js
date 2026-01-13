@@ -20,8 +20,10 @@ const corsOptions = {
             return callback(null, true);
         }
 
-        // Allow specific production domains if added later
-        const allowedOrigins = [];
+        // Allow specific production domains from environment variables
+        const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+            ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+            : [];
         if (allowedOrigins.indexOf(origin) !== -1) {
             return callback(null, true);
         }
