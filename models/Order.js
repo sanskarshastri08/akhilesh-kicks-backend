@@ -58,9 +58,12 @@ const orderSchema = mongoose.Schema(
             required: true,
             default: 0.0,
         },
-        taxPrice: {
+        couponCode: {
+            type: String,
+            default: null,
+        },
+        couponDiscount: {
             type: Number,
-            required: true,
             default: 0.0,
         },
         totalPrice: {

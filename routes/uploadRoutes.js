@@ -1,117 +1,85 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const { protect, admin } = require('../middleware/authMiddleware');
+const { cloudinary, upload } = require('../config/cloudinary');
 
 const router = express.Router();
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer storage
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-        // Create unique filename with timestamp
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = path.extname(file.originalname);
-        const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '-');
-        cb(null, `${name}-${uniqueSuffix}${ext}`);
-    }
-});
-
-// File filter to accept only images
-const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-
-    if (extname && mimetype) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
-    }
-};
-
-// Configure multer
-const upload = multer({
-    storage: storage,
-    fileFilter: fileFilter,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
-    }
-});
-
 // @route   POST /api/upload
-// @desc    Upload a single image
+// @desc    Upload a single image to Cloudinary
 // @access  Private/Admin
-router.post('/', protect, admin, upload.single('image'), (req, res) => {
+router.post('/', protect, admin, upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No file uploaded' });
         }
 
-        // Return the file path that can be accessed via the server
-        const fileUrl = `/uploads/${req.file.filename}`;
-
+        // Cloudinary automatically uploads and returns the URL
         res.status(200).json({
-            message: 'File uploaded successfully',
-            url: fileUrl,
-            filename: req.file.filename
+            message: 'File uploaded successfully to Cloudinary',
+            url: req.file.path, // Cloudinary URL
+            publicId: req.file.filename, // Cloudinary public ID
         });
     } catch (error) {
+        console.error('Upload error:', error);
         res.status(500).json({ message: error.message });
     }
 });
 
 // @route   POST /api/upload/multiple
-// @desc    Upload multiple images
+// @desc    Upload multiple images to Cloudinary
 // @access  Private/Admin
-router.post('/multiple', protect, admin, upload.array('images', 10), (req, res) => {
+router.post('/multiple', protect, admin, upload.array('images', 10), async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ message: 'No files uploaded' });
         }
 
-        // Return array of file paths
+        // Return array of Cloudinary URLs
         const fileUrls = req.files.map(file => ({
-            url: `/uploads/${file.filename}`,
-            filename: file.filename
+            url: file.path, // Cloudinary URL
+            publicId: file.filename, // Cloudinary public ID
         }));
 
         res.status(200).json({
-            message: 'Files uploaded successfully',
-            files: fileUrls
+            message: 'Files uploaded successfully to Cloudinary',
+            files: fileUrls,
         });
     } catch (error) {
+        console.error('Upload error:', error);
         res.status(500).json({ message: error.message });
     }
 });
 
-// @route   DELETE /api/upload/:filename
-// @desc    Delete an uploaded image
+// @route   DELETE /api/upload/:publicId
+// @desc    Delete an image from Cloudinary
 // @access  Private/Admin
-router.delete('/:filename', protect, admin, (req, res) => {
+router.delete('/:publicId', protect, admin, async (req, res) => {
     try {
-        const filename = req.params.filename;
-        const filePath = path.join(uploadsDir, filename);
+        const publicId = req.params.publicId;
 
-        // Check if file exists
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ message: 'File not found' });
+        // Extract the full public ID (including folder path)
+        // If publicId contains 'just-your-kicks/products/', use it as is
+        // Otherwise, prepend the folder path
+        const fullPublicId = publicId.includes('just-your-kicks/products/')
+            ? publicId
+            : `just-your-kicks/products/${publicId}`;
+
+        // Delete from Cloudinary
+        const result = await cloudinary.uploader.destroy(fullPublicId);
+
+        if (result.result === 'ok' || result.result === 'not found') {
+            res.status(200).json({
+                message: 'File deleted successfully from Cloudinary',
+                result: result
+            });
+        } else {
+            res.status(400).json({
+                message: 'Failed to delete file from Cloudinary',
+                result: result
+            });
         }
-
-        // Delete the file
-        fs.unlinkSync(filePath);
-
-        res.status(200).json({ message: 'File deleted successfully' });
     } catch (error) {
+        console.error('Delete error:', error);
         res.status(500).json({ message: error.message });
     }
 });

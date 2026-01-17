@@ -10,8 +10,9 @@ const addOrderItems = async (req, res) => {
             shippingAddress,
             paymentMethod,
             itemsPrice,
-            taxPrice,
             shippingPrice,
+            couponCode,
+            couponDiscount,
             totalPrice,
         } = req.body;
 
@@ -25,8 +26,9 @@ const addOrderItems = async (req, res) => {
                 shippingAddress,
                 paymentMethod,
                 itemsPrice,
-                taxPrice,
                 shippingPrice,
+                couponCode: couponCode || null,
+                couponDiscount: couponDiscount || 0,
                 totalPrice,
                 orderNumber: `ORD-${Date.now()}` // Simple generation
             });
@@ -98,9 +100,34 @@ const updateOrderToPaid = async (req, res) => {
 // @access  Private/Admin
 const updateOrderToDelivered = async (req, res) => {
     try {
-        const order = await Order.findById(req.params.id);
+        const order = await Order.findById(req.params.id).populate('orderItems.product');
 
         if (order) {
+            // Check if already delivered to prevent double stock reduction
+            if (order.isDelivered) {
+                return res.status(400).json({ message: 'Order is already marked as delivered' });
+            }
+
+            // Reduce stock for each product in the order
+            const Product = require('../models/Product');
+
+            for (const item of order.orderItems) {
+                const product = await Product.findById(item.product);
+
+                if (product) {
+                    // Reduce stock
+                    product.countInStock = Math.max(0, product.countInStock - item.qty);
+
+                    // Update status if out of stock
+                    if (product.countInStock === 0) {
+                        product.status = 'out_of_stock';
+                    }
+
+                    await product.save();
+                }
+            }
+
+            // Update order status
             order.isDelivered = true;
             order.deliveredAt = Date.now();
             order.status = 'delivered';
