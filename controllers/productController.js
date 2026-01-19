@@ -10,7 +10,16 @@ const getProducts = async (req, res) => {
         const page = Number(req.query.pageNumber) || 1;
 
         // Build filter object
-        const filter = { status: 'active' };
+        const filter = {};
+
+        // Status filter (default to 'active' if not specified)
+        if (req.query.status) {
+            if (req.query.status !== 'all') {
+                filter.status = req.query.status;
+            }
+        } else {
+            filter.status = 'active';
+        }
 
         // Keyword search
         if (req.query.keyword) {
