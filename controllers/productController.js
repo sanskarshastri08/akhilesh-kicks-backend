@@ -143,6 +143,7 @@ const createProduct = async (req, res) => {
         const product = new Product({
             name: req.body.name || 'Sample Name',
             price: req.body.price || 0,
+            originalPrice: req.body.originalPrice || 0,
             user: req.user?._id,
             images: req.body.images || ['https://via.placeholder.com/400'],
             brand: req.body.brand || 'Sample Brand',
@@ -150,7 +151,13 @@ const createProduct = async (req, res) => {
             numReviews: 0,
             description: req.body.description || 'Sample description',
             slug: req.body.slug || `sample-slug-${Date.now()}`,
-            countInStock: req.body.countInStock || 0
+            countInStock: req.body.countInStock || 0,
+            sizes: req.body.sizes || [],
+            colors: req.body.colors || [],
+            status: req.body.status || 'draft',
+            isNewProduct: req.body.isNewProduct || false,
+            isSale: req.body.isSale || false,
+            isFeatured: req.body.isFeatured || false,
         });
 
         const createdProduct = await product.save();

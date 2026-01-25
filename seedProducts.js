@@ -28,7 +28,10 @@ const products = [
         numReviews: 3,
         countInStock: 25,
         status: "active",
-        isFeatured: true
+        status: "active",
+        isFeatured: true,
+        isNewProduct: true,
+        isSale: false
     },
     {
         name: "Puma RS-X Reinvention",
@@ -51,7 +54,10 @@ const products = [
         numReviews: 2,
         countInStock: 18,
         status: "active",
-        isFeatured: true
+        status: "active",
+        isFeatured: true,
+        isNewProduct: false,
+        isSale: true
     },
     {
         name: "USPA Classic Court",
@@ -74,7 +80,10 @@ const products = [
         numReviews: 3,
         countInStock: 30,
         status: "active",
-        isFeatured: false
+        status: "active",
+        isFeatured: false,
+        isNewProduct: true,
+        isSale: true
     },
     {
         name: "Wrong Classic Flip",
