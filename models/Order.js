@@ -48,6 +48,16 @@ const orderSchema = mongoose.Schema(
             update_time: { type: String },
             email_address: { type: String },
         },
+        // Razorpay specific fields
+        razorpayOrderId: {
+            type: String,
+        },
+        razorpayPaymentId: {
+            type: String,
+        },
+        razorpaySignature: {
+            type: String,
+        },
         subtotal: {
             type: Number,
             required: true,

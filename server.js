@@ -52,6 +52,7 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes')); // For admin management
 app.use('/api/upload', require('./routes/uploadRoutes')); // Image upload routes
 app.use('/api/coupons', require('./routes/couponRoutes')); // Coupon management
+app.use('/api/payments', require('./routes/paymentRoutes')); // Payment processing
 
 app.get('/', (req, res) => {
     res.send('API is running...');
