@@ -12,14 +12,16 @@ cloudinary.config({
 // Configure Cloudinary storage for multer
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-        folder: 'just-your-kicks/products', // Folder name in Cloudinary
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-        transformation: [
-            { width: 1000, height: 1000, crop: 'limit' }, // Limit max size
-            { quality: 'auto' }, // Auto quality optimization
-            { fetch_format: 'auto' }, // Auto format (WebP for supported browsers)
-        ],
+    params: async (req, file) => {
+        return {
+            folder: 'just-your-kicks/products', // Folder name in Cloudinary
+            allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+            transformation: [
+                { width: 1000, height: 1000, crop: 'limit' }, // Limit max size
+                { quality: 'auto' }, // Auto quality optimization
+                { fetch_format: 'auto' }, // Auto format (WebP for supported browsers)
+            ],
+        };
     },
 });
 
