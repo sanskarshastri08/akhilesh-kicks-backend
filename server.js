@@ -54,6 +54,7 @@ app.use('/api/upload', require('./routes/uploadRoutes')); // Image upload routes
 app.use('/api/coupons', require('./routes/couponRoutes')); // Coupon management
 app.use('/api/payments', require('./routes/paymentRoutes')); // Payment processing
 app.use('/api/contact', require('./routes/contactRoutes')); // Contact form submissions
+app.use('/api/settings', require('./routes/settingRoutes')); // Global settings
 
 app.get('/', (req, res) => {
     res.send('API is running...');

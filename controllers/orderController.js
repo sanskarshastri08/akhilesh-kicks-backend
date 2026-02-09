@@ -1,4 +1,5 @@
 const Order = require('../models/Order');
+const Setting = require('../models/Setting');
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -10,33 +11,52 @@ const addOrderItems = async (req, res) => {
             shippingAddress,
             paymentMethod,
             itemsPrice,
-            shippingPrice,
             couponCode,
             couponDiscount,
             totalPrice,
         } = req.body;
 
+        let { shippingPrice } = req.body;
+
         if (orderItems && orderItems.length === 0) {
             res.status(400).json({ message: 'No order items' });
             return;
-        } else {
-            const order = new Order({
-                orderItems,
-                user: req.user._id,
-                shippingAddress,
-                paymentMethod,
-                itemsPrice,
-                shippingPrice,
-                couponCode: couponCode || null,
-                couponDiscount: couponDiscount || 0,
-                totalPrice,
-                orderNumber: `ORD-${Date.now()}` // Simple generation
-            });
-
-            const createdOrder = await order.save();
-
-            res.status(201).json(createdOrder);
         }
+
+        // Recalculate shipping price on backend for security
+        const settings = await Setting.findOne();
+        if (settings && settings.shipping) {
+            const { shipping } = settings;
+            let isFree = false;
+
+            const totalItems = orderItems.reduce((acc, item) => acc + item.qty, 0);
+
+            if (shipping.isFreeShippingEnabled && itemsPrice >= shipping.freeShippingThreshold) {
+                isFree = true;
+            }
+            if (shipping.buyXGetFreeEnabled && totalItems >= shipping.buyXItems) {
+                isFree = true;
+            }
+
+            shippingPrice = isFree ? 0 : shipping.standardRate;
+        }
+
+        const order = new Order({
+            orderItems,
+            user: req.user._id,
+            shippingAddress,
+            paymentMethod,
+            itemsPrice,
+            shippingPrice,
+            couponCode: couponCode || null,
+            couponDiscount: couponDiscount || 0,
+            totalPrice: itemsPrice + shippingPrice - (couponDiscount || 0),
+            orderNumber: `ORD-${Date.now()}` // Simple generation
+        });
+
+        const createdOrder = await order.save();
+
+        res.status(201).json(createdOrder);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -203,4 +223,3 @@ module.exports = {
     getOrders,
     updateOrderStatus,
 };
-

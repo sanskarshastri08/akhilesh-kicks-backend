@@ -5,6 +5,7 @@ const {
     updateUserProfile,
     getUsers,
     deleteUser,
+    getUserById,
     syncCart,
     syncWishlist
 } = require('../controllers/userController');
@@ -19,6 +20,7 @@ router.route('/cart').post(protect, syncCart);
 router.route('/wishlist').post(protect, syncWishlist);
 router
     .route('/:id')
+    .get(protect, admin, getUserById)
     .delete(protect, admin, deleteUser);
 
 module.exports = router;

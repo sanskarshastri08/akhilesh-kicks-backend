@@ -136,11 +136,29 @@ const deleteUser = async (req, res) => {
     }
 };
 
+// @desc    Get user by ID
+// @route   GET /api/users/:id
+// @access  Private/Admin
+const getUserById = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password');
+
+        if (user) {
+            res.json(user);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 module.exports = {
     getUserProfile,
     updateUserProfile,
     getUsers,
     deleteUser,
+    getUserById,
     syncWishlist,
     syncCart
 };

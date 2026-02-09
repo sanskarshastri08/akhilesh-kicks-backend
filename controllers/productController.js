@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const Review = require('../models/Review');
 
 // @desc    Fetch all products
 // @route   GET /api/products
@@ -230,23 +231,89 @@ const updateProduct = async (req, res) => {
 // @route   POST /api/products/:id/reviews
 // @access  Private
 const createProductReview = async (req, res) => {
-    console.log('createProductReview called for product:', req.params.id);
     try {
-        const { rating, comment } = req.body;
+        const { rating, comment, photos } = req.body;
 
         const product = await Product.findById(req.params.id);
 
         if (product) {
-            // For now, just acknowledge the review
-            // In a full implementation, you'd create a Review document
-            console.log(`Review submitted for ${product.name} by ${req.user.name}`);
-            res.status(201).json({ message: 'Review added' });
+            const alreadyReviewed = await Review.findOne({
+                user: req.user._id,
+                product: req.params.id
+            });
+
+            if (alreadyReviewed) {
+                res.status(400);
+                throw new Error('Product already reviewed');
+            }
+
+            const review = new Review({
+                name: req.user.name,
+                rating: Number(rating),
+                comment,
+                user: req.user._id,
+                product: req.params.id,
+                photos: photos || [],
+                status: 'pending' // Admin must approve
+            });
+
+            await review.save();
+
+            // Update product's numReviews and rating (optional, only counts approved ones)
+            // For now just respond
+            res.status(201).json({ message: 'Review added and pending approval' });
         } else {
             res.status(404).json({ message: 'Product not found' });
         }
     } catch (error) {
-        console.error('createProductReview error:', error);
         res.status(400).json({ message: error.message });
+    }
+};
+
+// @desc    Get all reviews (Admin)
+// @route   GET /api/products/reviews/all
+// @access  Private/Admin
+const getAllReviews = async (req, res) => {
+    try {
+        const reviews = await Review.find({})
+            .populate('user', 'name email')
+            .populate('product', 'name')
+            .sort({ createdAt: -1 });
+        res.json(reviews);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Update review status (Admin)
+// @route   PUT /api/products/reviews/:id
+// @access  Private/Admin
+const updateReviewStatus = async (req, res) => {
+    try {
+        const { status } = req.body;
+        const review = await Review.findById(req.params.id);
+
+        if (review) {
+            review.status = status;
+            await review.save();
+
+            // If approved, update product rating
+            if (status === 'approved') {
+                const product = await Product.findById(review.product);
+                if (product) {
+                    const approvedReviews = await Review.find({ product: review.product, status: 'approved' });
+                    product.numReviews = approvedReviews.length;
+                    product.rating = approvedReviews.reduce((acc, item) => item.rating + acc, 0) / approvedReviews.length;
+                    await product.save();
+                }
+            }
+
+            res.json({ message: `Review ${status}` });
+        } else {
+            res.status(404).json({ message: 'Review not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -257,4 +324,6 @@ module.exports = {
     createProduct,
     updateProduct,
     createProductReview,
+    getAllReviews,
+    updateReviewStatus,
 };
